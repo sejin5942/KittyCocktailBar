@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a1030" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>고양이 판타지 쉐이크</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="game">
+    <div id="hud"></div>
+
+    <div id="app">
+      <!-- 타이틀 화면 -->
+      <div class="screen center" id="title-screen">
+        <div class="title-orbs">
+          <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span>
+        </div>
+        <div class="big-emoji title-cat">🐱🍸</div>
+        <h1 class="game-title">고양이 판타지<br>쉐이크</h1>
+        <p class="muted">판타지 바의 고양이 바텐더가 되어<br>손님의 주문에 맞는 마법 물약을 흔들어 만드세요냥!</p>
+        <button class="btn primary big" id="start-btn">가게 시작하기 ✨</button>
+        <p class="muted small foot">📱 휴대폰을 흔들어 조작해요 · PC는 드래그/Space로 대체</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/shake.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

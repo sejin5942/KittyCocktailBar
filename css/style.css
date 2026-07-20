@@ -1,0 +1,337 @@
+/* =========================================================================
+ * 고양이 판타지 쉐이크 — 스타일
+ * 컨셉: 귀엽고 유쾌한 어두운 마법 술집 · 형광빛 액체 · 중앙 집중 UI
+ * ========================================================================= */
+
+:root {
+  --bg0: #150a2b;
+  --bg1: #241145;
+  --panel: rgba(255, 255, 255, 0.06);
+  --panel-brd: rgba(255, 255, 255, 0.12);
+  --ink: #f4ecff;
+  --muted: #b6a6d8;
+  --neon: #b06bff;
+  --neon2: #58e0ff;
+  --pink: #ff7ac0;
+  --gold: #ffd76b;
+  --danger: #ff5a6e;
+  --radius: 18px;
+  --font: 'Trebuchet MS', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  font-family: var(--font);
+  color: var(--ink);
+  overflow: hidden;
+  user-select: none;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #3a1d6e 0%, transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, #5b2a8a 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 100%, #1c6b8a 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg1), var(--bg0));
+}
+
+#game {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---- HUD ---- */
+#hud {
+  display: none;
+  gap: 8px;
+  padding: 12px 14px calc(8px + env(safe-area-inset-top));
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 14px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.35), transparent);
+  z-index: 10;
+}
+.hud-item {
+  background: var(--panel);
+  border: 1px solid var(--panel-brd);
+  border-radius: 999px;
+  padding: 5px 12px;
+  backdrop-filter: blur(6px);
+}
+
+/* ---- 화면 컨테이너 ---- */
+#app { flex: 1; position: relative; overflow-y: auto; overflow-x: hidden; }
+.screen {
+  position: absolute; inset: 0;
+  padding: 16px 18px calc(20px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 14px;
+}
+.screen.center { align-items: center; justify-content: center; text-align: center; }
+
+.fade-in { animation: fadeIn .35s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+h1 { font-size: 30px; margin: 4px 0; letter-spacing: -0.5px; }
+h2 { font-size: 22px; margin: 4px 0; }
+h2.tight, h1.tight { margin: 0; }
+.muted { color: var(--muted); line-height: 1.5; }
+.small { font-size: 12px; }
+.foot { margin-top: 6px; }
+.big-emoji { font-size: 60px; filter: drop-shadow(0 6px 16px rgba(176,107,255,.5)); }
+
+/* ---- 버튼 ---- */
+.btn {
+  border: none; cursor: pointer; font-family: var(--font); font-weight: bold;
+  color: var(--ink); font-size: 16px; padding: 13px 22px; border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--panel-brd);
+  transition: transform .08s ease, box-shadow .2s ease, filter .2s ease;
+}
+.btn:active { transform: scale(0.96); }
+.btn.primary {
+  background: linear-gradient(135deg, var(--neon), var(--pink));
+  box-shadow: 0 8px 22px rgba(176,107,255,.4);
+  border: none;
+}
+.btn.danger {
+  background: linear-gradient(135deg, #ff5a6e, #ff9a3c);
+  box-shadow: 0 8px 22px rgba(255,90,110,.4); border: none;
+}
+.btn.big { font-size: 19px; padding: 16px 30px; }
+.btn.small { font-size: 13px; padding: 8px 14px; }
+.btn.disabled, .btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
+
+/* ---- 타이틀 ---- */
+.game-title {
+  font-size: 38px; line-height: 1.1;
+  background: linear-gradient(120deg, var(--neon2), var(--pink), var(--gold));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 10px rgba(255,122,192,.35));
+}
+.title-cat { animation: bob 2.4s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-10px) rotate(3deg); } }
+.title-orbs .orb {
+  position: absolute; border-radius: 50%; filter: blur(2px); opacity: .7;
+  animation: float 6s ease-in-out infinite;
+}
+.orb.o1 { width: 14px; height: 14px; background: var(--neon2); top: 18%; left: 20%; }
+.orb.o2 { width: 10px; height: 10px; background: var(--pink); top: 30%; right: 18%; animation-delay: 1.5s; }
+.orb.o3 { width: 8px; height: 8px; background: var(--gold); bottom: 26%; left: 30%; animation-delay: 3s; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-18px); } }
+
+/* ---- 진행 표시 ---- */
+.progress-pips { display: flex; gap: 6px; justify-content: center; }
+.pip { width: 22px; height: 6px; border-radius: 999px; background: var(--panel-brd); }
+.pip.on { background: linear-gradient(90deg, var(--neon2), var(--pink)); }
+
+/* ---- 손님 카드 ---- */
+.customer-card {
+  background: var(--panel); border: 1px solid var(--panel-brd);
+  border-radius: var(--radius); padding: 22px 18px; text-align: center;
+  box-shadow: 0 0 40px -12px var(--cc, var(--neon));
+}
+.customer-face { font-size: 66px; animation: bob 3s ease-in-out infinite; }
+.customer-name { font-weight: bold; margin: 8px 0; font-size: 17px; }
+.speech-bubble {
+  position: relative; display: inline-block; margin-top: 6px;
+  background: #fff; color: #2a1c40; border-radius: 16px;
+  padding: 12px 16px; font-weight: 600; line-height: 1.4; font-size: 15px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.3);
+}
+.speech-bubble::after {
+  content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  border: 8px solid transparent; border-bottom-color: #fff; border-top: 0;
+}
+.speech-bubble.small { font-size: 13px; padding: 8px 12px; }
+.order-hint { color: var(--muted); }
+.order-hint b { color: var(--gold); }
+
+/* ---- 재료 그리드 ---- */
+.ingredient-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ing-cell {
+  background: var(--panel); border: 2px solid var(--panel-brd); border-radius: 16px;
+  padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  color: var(--ink); cursor: pointer; transition: transform .1s, border-color .15s, box-shadow .2s;
+}
+.ing-cell:active { transform: scale(.94); }
+.ing-emoji { font-size: 30px; filter: drop-shadow(0 3px 8px var(--ic)); }
+.ing-name { font-size: 12px; }
+.ing-cell.picked {
+  border-color: var(--ic); box-shadow: 0 0 18px -4px var(--ic);
+  background: color-mix(in srgb, var(--ic) 22%, var(--panel));
+}
+.selected-bar { min-height: 30px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.chip {
+  background: var(--panel); border: 1px solid var(--panel-brd);
+  border-radius: 999px; padding: 5px 11px; font-size: 12px;
+}
+
+/* ---- 제조 조작 ---- */
+.prep-label { font-weight: bold; font-size: 18px; }
+.prep-stage { display: flex; align-items: center; justify-content: center; gap: 10px; height: 150px; }
+.prep-item { font-size: 72px; cursor: pointer; filter: drop-shadow(0 6px 14px var(--ic)); }
+.prep-bowl { font-size: 54px; opacity: .85; }
+.anim-mash { animation: mash .22s ease; }
+@keyframes mash { 50% { transform: scale(.7) rotate(-6deg); } }
+.anim-tap { animation: tap .18s ease; }
+@keyframes tap { 50% { transform: translateY(8px) scale(.92); } }
+.anim-pour { animation: pour .5s ease; }
+@keyframes pour { 50% { transform: rotate(38deg); } }
+
+.meter { width: 80%; max-width: 300px; height: 14px; background: var(--panel); border-radius: 999px; overflow: hidden; border: 1px solid var(--panel-brd); }
+.meter-fill { width: 0; height: 100%; background: var(--mc, var(--neon)); transition: width .15s ease; box-shadow: 0 0 14px var(--mc, var(--neon)); }
+
+/* ---- 흔들기 화면 ---- */
+.shake-screen { justify-content: flex-start; padding-top: 22px; }
+.shake-title { font-size: 20px; font-weight: bold; }
+.bottle-wrap { position: relative; height: 190px; display: flex; align-items: center; justify-content: center; margin: 6px 0; }
+.aura {
+  position: absolute; width: 150px; height: 150px; border-radius: 50%;
+  background: radial-gradient(circle, var(--neon2), transparent 70%);
+  opacity: 0; transition: opacity .1s, transform .1s; pointer-events: none;
+}
+.bottle {
+  position: relative; width: 92px; height: 150px;
+  background: rgba(255,255,255,.10);
+  border: 3px solid rgba(255,255,255,.35);
+  border-radius: 16px 16px 26px 26px;
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(255,255,255,.15);
+}
+.bottle.shaking { animation: bshake .12s linear infinite; }
+.bottle.over { animation: bshakehard .07s linear infinite; }
+@keyframes bshake { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes bshakehard { 0%,100% { transform: rotate(-7deg) translateX(-2px); } 50% { transform: rotate(7deg) translateX(2px); } }
+.bottle-neck {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 34px; height: 14px; background: rgba(255,255,255,.25);
+  border-radius: 0 0 8px 8px;
+}
+.liquid {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 62%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--liq) 70%, #fff 30%), var(--liq));
+  box-shadow: 0 0 24px var(--liq);
+  transform: translateX(var(--sway, 0));
+  transition: transform .05s ease;
+}
+.liquid::before {
+  content: ''; position: absolute; top: -6px; left: 0; right: 0; height: 12px;
+  background: color-mix(in srgb, var(--liq) 40%, #fff 60%); border-radius: 50%;
+}
+.foam {
+  position: absolute; bottom: 60%; left: 0; right: 0; height: 8px;
+  background: repeating-radial-gradient(circle at 6px 4px, rgba(255,255,255,.7) 0 3px, transparent 3px 8px);
+  opacity: .6;
+}
+
+/* 강도 게이지 (가로) — 바늘을 목표 존 안에 유지 */
+.intensity-gauge {
+  position: relative; width: 240px; height: 22px;
+  background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 999px;
+  margin-top: 8px; overflow: hidden;
+}
+.target-zone {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 30%;
+  background: linear-gradient(90deg, rgba(88,224,255,.4), rgba(176,107,255,.4));
+  border-left: 2px dashed rgba(255,255,255,.55); border-right: 2px dashed rgba(255,255,255,.55);
+}
+.needle {
+  position: absolute; top: -2px; bottom: -2px; width: 6px; left: 0;
+  background: #fff; box-shadow: 0 0 12px #fff; border-radius: 999px;
+  transform: translateX(-50%);
+  transition: left .05s linear;
+}
+.needle.in-zone { background: var(--neon2); box-shadow: 0 0 18px var(--neon2); }
+
+/* 리듬 트랙 */
+.beat-track {
+  position: relative; width: 240px; height: 40px; margin-top: 12px;
+  border-radius: 12px; background: var(--panel); border: 1px solid var(--panel-brd);
+  overflow: hidden;
+}
+.beat-track::after {
+  content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 3px;
+  transform: translateX(-50%); background: var(--gold); box-shadow: 0 0 10px var(--gold);
+}
+.beat-cue {
+  position: absolute; left: 100%; top: 50%; width: 16px; height: 16px; margin-top: -8px;
+  border-radius: 50%; background: var(--neon2); box-shadow: 0 0 10px var(--neon2);
+  transition: left 1.1s linear;
+}
+.beat-cue.go { left: -10%; }
+.beat-hit { position: absolute; left: 50%; top: 0; bottom: 0; width: 6px; transform: translateX(-50%); border-radius: 4px; }
+.beat-hit.good { background: #7dffb0; box-shadow: 0 0 12px #7dffb0; }
+.beat-hit.ok { background: var(--gold); }
+.beat-hit.bad { background: var(--danger); }
+.shake-status { margin-top: 10px; font-weight: bold; min-height: 22px; }
+.hint-motion { margin-top: auto; }
+
+/* ---- 멈추기 화면 ---- */
+.stop-tube {
+  position: relative; width: 90px; height: 230px;
+  background: rgba(255,255,255,.08); border: 3px solid rgba(255,255,255,.3);
+  border-radius: 14px 14px 22px 22px; overflow: hidden; margin: 8px 0;
+}
+.stop-fill {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--liq) 60%, #fff), var(--liq));
+  box-shadow: 0 0 20px var(--liq);
+}
+.stop-fill.overflow { animation: overflow .4s ease; }
+@keyframes overflow { 0% { filter: brightness(1); } 50% { filter: brightness(2.4); transform: translateY(-6px); } }
+.stop-danger-line {
+  position: absolute; left: -4px; right: -4px; top: 12%; height: 3px;
+  background: var(--danger); box-shadow: 0 0 10px var(--danger); z-index: 3;
+}
+.stop-neck {
+  position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: var(--danger); font-weight: bold; padding-top: 2px;
+}
+
+/* ---- 결과 ---- */
+.result-emoji { font-size: 76px; filter: drop-shadow(0 6px 18px rgba(176,107,255,.5)); }
+.result-emoji.boom { animation: boom .5s ease; }
+@keyframes boom { 0% { transform: scale(.4); } 60% { transform: scale(1.4) rotate(8deg); } 100% { transform: scale(1); } }
+.result-title { margin: 2px 0; }
+.customer-reaction { display: flex; align-items: center; gap: 10px; justify-content: center; }
+.react-face { font-size: 44px; }
+.pref-note { color: var(--pink); font-weight: bold; font-size: 14px; }
+.side-effect {
+  background: rgba(255,122,192,.14); border: 1px solid rgba(255,122,192,.3);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; color: #ffd0ec;
+}
+.score-panel { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.score-row { display: flex; align-items: center; gap: 10px; }
+.score-label { width: 92px; text-align: right; font-size: 12px; color: var(--muted); }
+.score-bar { flex: 1; height: 12px; background: var(--panel); border-radius: 999px; overflow: hidden; border: 1px solid var(--panel-brd); }
+.score-bar-fill { height: 100%; background: linear-gradient(90deg, var(--neon2), var(--pink)); transition: width .6s ease; }
+.rewards { display: flex; gap: 16px; font-weight: bold; font-size: 18px; margin: 4px 0; }
+.reward { color: var(--gold); }
+
+/* 등급별 배경 강조 */
+.result.g-perfect .result-title { color: var(--neon2); }
+.result.g-explode .result-title { color: var(--danger); }
+.result.g-mystery .result-title { color: var(--muted); }
+
+/* ---- 정산 / 상점 ---- */
+.tally { display: flex; flex-direction: column; gap: 8px; font-size: 18px; }
+.tally b { color: var(--gold); }
+.shop-list { display: flex; flex-direction: column; gap: 10px; }
+.shop-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 16px; padding: 12px 14px;
+}
+.shop-item.owned { opacity: .7; }
+.shop-emoji { font-size: 34px; }
+.shop-info { flex: 1; text-align: left; }
+.shop-name { font-weight: bold; }
+
+/* 스크롤바 최소화 */
+#app::-webkit-scrollbar { width: 0; }
