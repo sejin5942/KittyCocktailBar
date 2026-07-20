@@ -104,8 +104,8 @@ class ShakeSensor {
 
     // 박자 감지: 강한 순간 충격이 임계값을 넘고 쿨다운이 끝났을 때
     if (this._beatCooldown > 0) this._beatCooldown--;
-    if (this.active && this.rawImpulse > 0.55 && this._beatCooldown === 0) {
-      this._beatCooldown = 8; // 약 130ms
+    if (this.active && this.rawImpulse > 0.5 && this._beatCooldown === 0) {
+      this._beatCooldown = 6; // 약 100ms (초당 최대 ~10회)
       if (this.onBeat) this.onBeat(this.rawImpulse);
     }
 

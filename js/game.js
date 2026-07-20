@@ -1,34 +1,48 @@
 /* =========================================================================
  * 고양이 판타지 쉐이크 — 메인 게임 로직
- * 상태 흐름:
- *   title → dayIntro → order → ingredients → prep → shake → stop → result
- *   → (다음 손님 or dayEnd → shop) → order ...
+ *
+ * 흐름:
+ *   title → dayIntro → order → ingredients → shake → result
+ *         → (다음 손님 or dayEnd → shop) → order ...
+ *
+ * 핵심:
+ *   - 칵테일마다 필요한 쉐이킹 횟수(shakes)가 정해져 있다.
+ *   - 손님의 대기 시간(time) 안에 그 횟수를 채우면 완성, 못 채우면 실패.
+ *   - 대기 시간은 재료 선택 + 흔들기 전체에 걸쳐 흐른다.
  * ========================================================================= */
 
 const CUSTOMERS_PER_DAY = 5;
-const ORDER_TIME_LIMIT = 45; // 주문당 제한 시간(초)
 
 const Game = {
   // ---- 지속 상태 ----
   day: 1,
   gold: 0,
   reputation: 0,
-  upgrades: {},            // id → true
-  effects: { shakeTolerance: 0, recipeBonus: 0, safeCharm: 0, goldMult: 0 },
+  upgrades: {},
+  effects: { shakeMult: 0, recipeBonus: 0, timeBonus: 0, safeCharm: 0, goldMult: 0 },
   charmUsedToday: 0,
 
   // ---- 하루/손님 상태 ----
   customerIndex: 0,
   dayOrders: [],
   order: null,
-  selected: [],            // 선택한 재료 id
-  prepDone: {},            // 재료 id → true (조작 완료)
+  selected: [],
 
-  // ---- 제조 결과 지표 ----
-  metrics: { recipe: 0, intensity: 0, rhythm: 0, stop: 0 },
+  // ---- 제조 상태 ----
+  shakeProgress: 0,        // 누적 쉐이킹(업그레이드 배율 반영, 실수 소수 가능)
+  requiredShakes: 0,
+  completed: false,
+  finished: false,         // 이번 주문 판정 완료 여부(중복 방지)
+  timeLeftAtFinish: 0,
+
+  // ---- 대기 시간 타이머 ----
+  patienceTotal: 0,
+  timeLeft: 0,
+  _patienceActive: false,
+  _patienceRAF: 0,
+  _patienceStart: 0,
 
   sensor: null,
-  el: {},                  // DOM 캐시
 };
 
 /* ------------------------------------------------------------------ */
@@ -40,37 +54,40 @@ window.addEventListener('DOMContentLoaded', () => {
   UI.showScreen('title');
 
   document.getElementById('start-btn').addEventListener('click', async () => {
-    // 사용자 제스처 안에서 센서 권한 요청
-    await Game.sensor.enable();
+    await Game.sensor.enable();   // 사용자 제스처 안에서 센서 권한 요청
     Game.startDay();
   });
 });
 
 /* ------------------------------------------------------------------ */
-/* 하루 시작                                                          */
+/* 하루 / 손님 진행                                                   */
 /* ------------------------------------------------------------------ */
 Game.startDay = function () {
   this.charmUsedToday = 0;
   this.customerIndex = 0;
-  // 하루 손님 주문을 무작위로 구성
   this.dayOrders = [];
   const pool = [...ORDERS];
   for (let i = 0; i < CUSTOMERS_PER_DAY; i++) {
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    this.dayOrders.push(pick);
+    this.dayOrders.push(pool[Math.floor(Math.random() * pool.length)]);
   }
   UI.showDayIntro(this.day, () => this.nextCustomer());
 };
 
 Game.nextCustomer = function () {
-  if (this.customerIndex >= this.dayOrders.length) {
-    return this.endDay();
-  }
+  if (this.customerIndex >= this.dayOrders.length) return this.endDay();
   this.order = this.dayOrders[this.customerIndex];
   this.selected = [];
-  this.prepDone = {};
-  this.metrics = { recipe: 0, intensity: 0, rhythm: 0, stop: 0 };
+  this.shakeProgress = 0;
+  this.requiredShakes = this.order.shakes;
+  this.completed = false;
+  this.finished = false;
   UI.showOrder(this.order, this.customerIndex + 1, CUSTOMERS_PER_DAY);
+};
+
+// 손님이 주문을 받으면(재료 고르기 시작) 대기 시간이 흐르기 시작
+Game.beginService = function () {
+  this.startPatience(this.order.time + this.effects.timeBonus);
+  UI.showIngredients(this.order);
 };
 
 /* ------------------------------------------------------------------ */
@@ -84,13 +101,68 @@ Game.toggleIngredient = function (id) {
 };
 
 Game.confirmIngredients = function () {
-  if (this.selected.length === 0) return;
-  // 조작이 필요한 재료 큐 구성
-  UI.startPrep(this.selected);
+  if (this.selected.length === 0 || this.finished) return;
+  UI.startShake();
 };
 
 /* ------------------------------------------------------------------ */
-/* 제조 정확도 계산                                                   */
+/* 흔들기 카운트                                                      */
+/* ------------------------------------------------------------------ */
+Game.registerShake = function () {
+  if (this.finished || this.completed) return;
+  this.shakeProgress += 1 + this.effects.shakeMult;
+  const done = Math.min(this.requiredShakes, Math.floor(this.shakeProgress));
+  UI.updateShakeCount(done, this.requiredShakes);
+  if (this.shakeProgress >= this.requiredShakes) {
+    this.completed = true;
+    this.finishOrder(true);
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/* 대기 시간 타이머                                                   */
+/* ------------------------------------------------------------------ */
+Game.startPatience = function (seconds) {
+  this.patienceTotal = seconds;
+  this.timeLeft = seconds;
+  this._patienceStart = performance.now();
+  this._patienceActive = true;
+  const loop = (now) => {
+    if (!this._patienceActive) return;
+    this.timeLeft = Math.max(0, this.patienceTotal - (now - this._patienceStart) / 1000);
+    UI.updateTimer(this.timeLeft, this.patienceTotal);
+    if (this.timeLeft <= 0) {
+      this._patienceActive = false;
+      this.finishOrder(false);   // 시간 초과 → 실패
+      return;
+    }
+    this._patienceRAF = requestAnimationFrame(loop);
+  };
+  this._patienceRAF = requestAnimationFrame(loop);
+};
+
+Game.stopPatience = function () {
+  this._patienceActive = false;
+  cancelAnimationFrame(this._patienceRAF);
+};
+
+/* ------------------------------------------------------------------ */
+/* 주문 판정 종료                                                     */
+/* ------------------------------------------------------------------ */
+Game.finishOrder = function (success) {
+  if (this.finished) return;
+  this.finished = true;
+  this.completed = success;
+  this.timeLeftAtFinish = this.timeLeft;
+  this.stopPatience();
+  Game.sensor.stop();
+  Game.sensor.onBeat = null;
+  Game.sensor.onShake = null;
+  UI.showResult();
+};
+
+/* ------------------------------------------------------------------ */
+/* 재료 정확도                                                        */
 /* ------------------------------------------------------------------ */
 Game.computeRecipeAccuracy = function () {
   const need = new Set(this.order.recipe);
@@ -98,7 +170,6 @@ Game.computeRecipeAccuracy = function () {
   let correct = 0, wrong = 0;
   got.forEach(id => (need.has(id) ? correct++ : wrong++));
   const missing = this.order.recipe.length - correct;
-  // 정확도: 맞은 재료 비율에서 오답/누락 페널티
   let acc = correct / this.order.recipe.length;
   acc -= wrong * 0.25;
   acc -= missing * 0.15;
@@ -107,111 +178,81 @@ Game.computeRecipeAccuracy = function () {
 };
 
 /* ------------------------------------------------------------------ */
-/* 최종 결과 판정                                                     */
+/* 결과 판정                                                          */
 /* ------------------------------------------------------------------ */
 Game.judge = function () {
-  const m = this.metrics;
-  m.recipe = this.computeRecipeAccuracy();
-
-  // 종합 점수 (가중치)
-  const score =
-    m.recipe    * 0.35 +
-    m.intensity * 0.22 +
-    m.rhythm    * 0.23 +
-    m.stop      * 0.20;
-
+  const recipe = this.computeRecipeAccuracy();
+  const timeRatio = this.patienceTotal ? Math.max(0, this.timeLeftAtFinish / this.patienceTotal) : 0;
   const cust = CUSTOMERS[this.order.customer];
 
-  // 손님 선호 보너스/판정 변형
-  let prefBonus = 0;
+  let grade;
   let prefNote = '';
-  switch (cust.preference) {
-    case 'strong':
-      if (m.intensity > 0.75) { prefBonus = 0.08; prefNote = '강한 효과에 만족!'; }
-      break;
-    case 'precise':
-      if (m.recipe > 0.8 && m.rhythm > 0.7) { prefBonus = 0.08; prefNote = '정밀한 제조에 감탄!'; }
-      break;
-    case 'red': {
-      const red = this.selected.some(id => INGREDIENT_MAP[id]?.tags.includes('red'));
-      if (red) { prefBonus = 0.06; prefNote = '붉은 재료가 마음에 듦!'; }
-      break;
+
+  if (!this.completed) {
+    // 시간 초과 실패 — 부적으로 1회 구제 가능
+    if (this.effects.safeCharm > 0 && this.charmUsedToday < this.effects.safeCharm) {
+      this.charmUsedToday++;
+      grade = Object.assign({}, GRADES.mystery, { charmSaved: true });
+    } else {
+      grade = GRADES.fail;
     }
-    case 'gentle':
-      if (m.intensity < 0.6 && m.rhythm > 0.6) { prefBonus = 0.07; prefNote = '부드러운 제조를 반김!'; }
-      break;
-    case 'weird':
-      // 고블린은 이상할수록 좋아함 — 아래 등급 로직에서 처리
-      break;
+  } else if (recipe < 0.4) {
+    grade = GRADES.mystery;           // 완성했지만 재료가 엉망 → 정체불명
+  } else {
+    // 완성 + 재료 정확도 + 남은 시간으로 점수
+    let score = recipe * 0.6 + timeRatio * 0.4;
+
+    // 손님 선호 보너스
+    switch (cust.preference) {
+      case 'strong':
+        if (this.order.shakes >= 40) { score += 0.08; prefNote = '힘든 칵테일을 완성해 감탄!'; }
+        break;
+      case 'precise':
+        if (recipe >= 0.95) { score += 0.08; prefNote = '완벽한 배합에 감탄!'; }
+        break;
+      case 'red':
+        if (this.selected.some(id => INGREDIENT_MAP[id]?.tags.includes('red'))) { score += 0.06; prefNote = '붉은 재료가 마음에 듦!'; }
+        break;
+      case 'gentle':
+        if (timeRatio > 0.4) { score += 0.07; prefNote = '여유롭게 완성해서 만족!'; }
+        break;
+    }
+    score = Math.min(1, score);
+
+    if (score >= 0.85 && recipe >= 0.9) grade = GRADES.perfect;
+    else if (score >= 0.6) grade = GRADES.good;
+    else grade = GRADES.weak;
   }
 
-  const finalScore = Math.min(1, score + prefBonus);
-
-  // 등급 결정
-  let grade = this.decideGrade(finalScore, m, cust);
-
-  // 실수 방지 부적: 폭발을 막아줌
-  if (grade.key === 'explode' && this.effects.safeCharm > 0 && this.charmUsedToday < this.effects.safeCharm) {
-    this.charmUsedToday++;
-    grade = GRADES.mystery;
-    grade = Object.assign({}, GRADES.mystery, { charmSaved: true });
-  }
-
-  // 보상 계산
-  let gold = Math.round(grade.gold * (1 + this.effects.goldMult));
+  // 보상
+  const gold = Math.max(0, Math.round(grade.gold * (1 + this.effects.goldMult)));
   const rep = grade.rep;
-  this.gold += Math.max(0, gold);
+  this.gold += gold;
   this.reputation += rep;
 
-  // 부작용 문구
-  let sideEffect = null;
-  if (grade.sideEffect) {
-    sideEffect = SIDE_EFFECTS[Math.floor(Math.random() * SIDE_EFFECTS.length)];
-  }
-
-  const happy = finalScore >= 0.55 || (cust.preference === 'weird' && grade.key !== 'perfect');
+  const sideEffect = grade.sideEffect ? SIDE_EFFECTS[Math.floor(Math.random() * SIDE_EFFECTS.length)] : null;
+  const happy = grade.key !== 'fail' && (grade.key !== 'mystery' || cust.preference === 'weird');
   const quip = happy ? cust.quip.happy : cust.quip.sad;
 
-  return { grade, gold, rep, sideEffect, quip, prefNote, finalScore, metrics: m };
-};
-
-Game.decideGrade = function (score, m, cust) {
-  // 폭발: 과한 강도 + 늦은 멈춤
-  if (m.intensity > 0.92 && m.stop < 0.25) return GRADES.explode;
-  // 정체불명: 재료가 크게 어긋남
-  if (m.recipe < 0.3) {
-    // 고블린은 이상한 걸 좋아함 → 그래도 후한 편
-    return GRADES.mystery;
-  }
-  if (score >= 0.85) return GRADES.perfect;
-  if (score >= 0.62) {
-    // 강도 높고 정밀도 낮으면 '효과는 강하지만 부작용'
-    if (m.intensity > 0.7 && m.rhythm < 0.55) return GRADES.sideFx;
-    return GRADES.good;
-  }
-  if (score >= 0.4) return GRADES.weak;
-  return GRADES.mystery;
+  return { grade, gold, rep, sideEffect, quip, prefNote, recipe, timeRatio };
 };
 
 /* ------------------------------------------------------------------ */
-/* 결과 등급 정의                                                     */
+/* 결과 등급                                                          */
 /* ------------------------------------------------------------------ */
 const GRADES = {
-  perfect: { key: 'perfect', title: '완벽한 제조!',            emoji: '🌟', gold: 40, rep: 3,  sideEffect: false, cls: 'g-perfect' },
-  good:    { key: 'good',    title: '훌륭한 물약',              emoji: '✨', gold: 28, rep: 2,  sideEffect: false, cls: 'g-good' },
-  weak:    { key: 'weak',    title: '맛은 좋지만 효과가 약함',    emoji: '😌', gold: 15, rep: 1,  sideEffect: false, cls: 'g-weak' },
-  sideFx:  { key: 'sideFx',  title: '효과는 강하지만 부작용 발생!', emoji: '💥', gold: 20, rep: 0,  sideEffect: true,  cls: 'g-side' },
-  mystery: { key: 'mystery', title: '정체불명의 물약...',        emoji: '❓', gold: 10, rep: 0,  sideEffect: true,  cls: 'g-mystery' },
-  explode: { key: 'explode', title: '펑! 폭발!',               emoji: '🧨', gold: 3,  rep: -1, sideEffect: true,  cls: 'g-explode' },
+  perfect: { key: 'perfect', title: '완벽한 칵테일!',        emoji: '🌟', gold: 40, rep: 3,  sideEffect: false, cls: 'g-perfect' },
+  good:    { key: 'good',    title: '훌륭한 칵테일',          emoji: '✨', gold: 28, rep: 2,  sideEffect: false, cls: 'g-good' },
+  weak:    { key: 'weak',    title: '맛은 좋지만 평범함',      emoji: '😌', gold: 15, rep: 1,  sideEffect: false, cls: 'g-weak' },
+  mystery: { key: 'mystery', title: '정체불명의 칵테일...',    emoji: '❓', gold: 10, rep: 0,  sideEffect: true,  cls: 'g-mystery' },
+  fail:    { key: 'fail',    title: '주문 실패! (시간 초과)',  emoji: '💢', gold: 0,  rep: -1, sideEffect: false, cls: 'g-fail' },
 };
 
 /* ------------------------------------------------------------------ */
 /* 하루 종료 / 상점                                                   */
 /* ------------------------------------------------------------------ */
 Game.endDay = function () {
-  UI.showDayEnd(this.day, this.gold, this.reputation, () => {
-    UI.showShop();
-  });
+  UI.showDayEnd(this.day, this.gold, this.reputation, () => UI.showShop());
 };
 
 Game.buyUpgrade = function (id) {
@@ -219,9 +260,7 @@ Game.buyUpgrade = function (id) {
   if (!up || this.upgrades[id] || this.gold < up.cost) return;
   this.gold -= up.cost;
   this.upgrades[id] = true;
-  for (const k in up.effect) {
-    this.effects[k] = (this.effects[k] || 0) + up.effect[k];
-  }
+  for (const k in up.effect) this.effects[k] = (this.effects[k] || 0) + up.effect[k];
   UI.renderShop();
 };
 
