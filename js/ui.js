@@ -128,28 +128,32 @@ const UI = {
     ORDERS.forEach(o => {
       const d = Game.drinks[o.id];
       const made = !!(d && d.made);
+      const known = !o.secret || made;   // 공개 레시피는 항상, 비밀은 만들어야 공개
       const cust = CUSTOMERS[o.customer];
       const recipe = o.recipe.map(id => `${INGREDIENT_MAP[id].emoji} ${INGREDIENT_MAP[id].name}`);
-      const card = el('div', 'dex-card' + (made ? '' : ' locked'));
+      const tag = o.secret ? '<span class="ci-tag secret">🔒 비밀</span>' : '<span class="ci-tag open">📖 공개</span>';
+      const card = el('div', 'dex-card' + (known ? '' : ' locked'));
       card.style.setProperty('--cc', o.color);
-      if (made) {
-        const g = GRADES[d.best] || {};
-        card.innerHTML = `
-          <div class="dex-face"><div class="big-emoji dex-emoji">${o.emoji}</div></div>
-          <div class="dex-name">${o.name}</div>
-          <div class="dex-recipe">${recipe.join(' + ')}</div>
-          <div class="dex-drink">🫳 ${o.shakes}회 · ⏳ ${o.time}초</div>
-          <div class="dex-quip">최고 ${g.emoji || ''} ${g.title || ''}</div>
-          <div class="dex-hearts dex-made">🍸 ${d.count}잔 제조 · ${cust.name} 손님</div>
-        `;
-      } else {
-        card.innerHTML = `
-          <div class="dex-face"><div class="big-emoji dex-emoji sil">${o.emoji}</div></div>
-          <div class="dex-name">???</div>
-          <div class="dex-pref muted">아직 만들지 못한 칵테일</div>
-          <div class="dex-drink muted">🧺 재료 ${o.recipe.length} · 🫳 ${o.shakes}회 · ⏳ ${o.time}초</div>
-        `;
-      }
+
+      const face = known
+        ? `<div class="big-emoji dex-emoji">${o.emoji}</div>`
+        : `<div class="big-emoji dex-emoji sil">${o.emoji}</div>`;
+      const madeLine = made
+        ? `<div class="dex-hearts dex-made">${(GRADES[d.best] || {}).emoji || ''} 최고 · 🍸 ${d.count}잔</div>`
+        : `<div class="dex-hearts muted">아직 제조 전</div>`;
+
+      card.innerHTML = known ? `
+        <div class="dex-face">${face}</div>
+        <div class="dex-name">${o.name} ${tag}</div>
+        <div class="dex-recipe">${recipe.join(' + ')}</div>
+        <div class="dex-drink">🫳 ${o.shakes}회 · ⏳ ${o.time}초 · ${cust.name}</div>
+        ${madeLine}
+      ` : `
+        <div class="dex-face">${face}</div>
+        <div class="dex-name">??? ${tag}</div>
+        <div class="dex-recipe muted">레시피 ??? · 직접 찾아보세요</div>
+        <div class="dex-drink muted">🧺 재료 ${o.recipe.length} · 🫳 ${o.shakes}회 · ⏳ ${o.time}초</div>
+      `;
       grid.appendChild(card);
     });
   },
@@ -214,7 +218,10 @@ const UI = {
         <div class="speech-bubble">${order.want}</div>
       </div>
       <div class="cocktail-info">
-        <div class="ci-name">${order.emoji} ${order.name}</div>
+        <div class="ci-name">${order.emoji} ${order.name} ${order.secret ? '<span class="ci-tag secret">🔒 비밀</span>' : '<span class="ci-tag open">📖 공개</span>'}</div>
+        <div class="ci-recipe">${order.secret
+          ? '레시피: <b>???</b> (직접 찾아보세요!)'
+          : '레시피: ' + order.recipe.map(id => `${INGREDIENT_MAP[id].emoji} ${INGREDIENT_MAP[id].name}`).join(' + ')}</div>
         <div class="ci-stats">
           <span>🧺 재료 <b>${order.recipe.length}</b></span>
           <span>🫳 쉐이킹 <b>${order.shakes}</b>회</span>
@@ -245,11 +252,15 @@ const UI = {
 
     const grid = s.querySelector('#ing-grid');
     INGREDIENTS.forEach(ing => {
-      const b = el('button', 'ing-cell');
+      const owned = Game.hasIngredient(ing.id);
+      const b = el('button', 'ing-cell' + (owned ? '' : ' ing-locked'));
       b.dataset.id = ing.id;
       b.style.setProperty('--ic', ing.color);
-      b.innerHTML = `<span class="ing-emoji">${ing.emoji}</span><span class="ing-name">${ing.name}</span>`;
-      b.addEventListener('click', () => Game.toggleIngredient(ing.id));
+      b.innerHTML = owned
+        ? `<span class="ing-emoji">${ing.emoji}</span><span class="ing-name">${ing.name}</span>`
+        : `<span class="ing-emoji">${ing.emoji}</span><span class="ing-name">${ing.name}</span><span class="ing-lock">🔒</span>`;
+      if (owned) b.addEventListener('click', () => Game.toggleIngredient(ing.id));
+      else b.disabled = true;
       grid.appendChild(b);
     });
     s.querySelector('#confirm-ing').addEventListener('click', () => Game.confirmIngredients());
@@ -398,15 +409,46 @@ const UI = {
     const s = el('div', 'screen fade-in');
     s.innerHTML = `
       <h2 class="tight">상점 🛒</h2>
-      <p class="muted small">골드로 장비를 업그레이드하세요. (보유 💰 ${Game.gold})</p>
+      <p class="muted small">보유 💰 ${Game.gold}</p>
+      <h3 class="shop-h">🧪 희귀 재료</h3>
+      <div class="shop-list" id="ing-shop"></div>
+      <h3 class="shop-h">⚙️ 장비 업그레이드</h3>
       <div class="shop-list" id="shop-list"></div>
       <div class="shop-actions">
+        <button class="btn" id="adv-btn">🗺️ 모험</button>
         <button class="btn" id="dex-btn">📖 도감</button>
-        <button class="btn primary" id="next-day">다음 날 시작 🌅</button>
+        <button class="btn primary" id="next-day">다음 날 🌅</button>
       </div>
     `;
     this.root.appendChild(s);
     s.querySelector('#dex-btn').addEventListener('click', () => this.showCollection('shop'));
+    s.querySelector('#adv-btn').addEventListener('click', () => this.showAdventure());
+
+    // 희귀 재료 상점
+    const ingShop = s.querySelector('#ing-shop');
+    const rares = INGREDIENTS.filter(i => i.tier === 'rare');
+    const allOwned = rares.every(i => Game.hasIngredient(i.id));
+    if (allOwned) {
+      ingShop.innerHTML = '<div class="muted small" style="padding:4px 2px">모든 희귀 재료를 보유중이다냥! ✨</div>';
+    }
+    rares.forEach(ing => {
+      const owned = Game.hasIngredient(ing.id);
+      if (owned) return;
+      const afford = Game.gold >= ing.cost;
+      const item = el('div', 'shop-item');
+      item.style.setProperty('--ic', ing.color);
+      item.innerHTML = `
+        <div class="shop-emoji">${ing.emoji}</div>
+        <div class="shop-info">
+          <div class="shop-name">${ing.name}</div>
+          <div class="shop-desc muted small">${ing.place}에서도 채집 가능</div>
+        </div>
+        <button class="btn small ${afford ? 'primary' : 'disabled'}" ${afford ? '' : 'disabled'} data-id="${ing.id}">💰 ${ing.cost}</button>`;
+      ingShop.appendChild(item);
+      if (afford) item.querySelector('button').addEventListener('click', () => {
+        if (Game.buyIngredient(ing.id)) this.renderShop();
+      });
+    });
 
     const list = s.querySelector('#shop-list');
     UPGRADES.forEach(up => {
@@ -426,6 +468,60 @@ const UI = {
       if (!owned && afford) item.querySelector('button').addEventListener('click', () => Game.buyUpgrade(up.id));
     });
     s.querySelector('#next-day').addEventListener('click', () => Game.leaveShop());
+  },
+
+  /* =================================================================
+   * 모험 — 희귀 재료 채집 (하루 1회)
+   * ================================================================= */
+  showAdventure() {
+    this.renderHUD();
+    this.showSkip(false);
+    this.clear();
+    const rares = INGREDIENTS.filter(i => i.tier === 'rare');
+    const s = el('div', 'screen fade-in');
+    s.innerHTML = `
+      <div class="dex-header">
+        <button class="btn small" id="adv-back">← 뒤로</button>
+        <h2 class="tight">🗺️ 모험</h2>
+        <span class="dex-progress">${Game.adventuredToday ? '오늘 완료' : '하루 1회'}</span>
+      </div>
+      <p class="muted small">희귀 재료를 채집할 장소를 고르세요. (하루 한 곳만!)</p>
+      <div class="adv-list" id="adv-list"></div>
+    `;
+    this.root.appendChild(s);
+
+    const list = s.querySelector('#adv-list');
+    rares.forEach(ing => {
+      const owned = Game.hasIngredient(ing.id);
+      const disabled = owned || Game.adventuredToday;
+      const item = el('button', 'adv-card' + (owned ? ' owned' : ''));
+      item.style.setProperty('--ic', ing.color);
+      item.disabled = disabled;
+      item.innerHTML = `
+        <div class="adv-place">${ing.place}</div>
+        <div class="adv-ing">${ing.emoji} ${ing.name}</div>
+        <div class="adv-status">${owned ? '보유중 ✓' : (Game.adventuredToday ? '오늘은 끝' : '채집하기 →')}</div>`;
+      if (!disabled) item.addEventListener('click', () => this.doGather(ing.id));
+      list.appendChild(item);
+    });
+
+    s.querySelector('#adv-back').addEventListener('click', () => this.showShop());
+  },
+
+  doGather(id) {
+    if (!Game.gatherIngredient(id)) return;
+    const ing = INGREDIENT_MAP[id];
+    this.clear();
+    const s = el('div', 'screen center fade-in');
+    s.innerHTML = `
+      <div class="adv-found-place muted">${ing.place}</div>
+      <div class="big-emoji adv-pop">${ing.emoji}</div>
+      <h2>${ing.name} 획득!</h2>
+      <p class="muted">희귀 재료를 채집했다냥! 이제 제조에 쓸 수 있어요.</p>
+      <button class="btn primary" id="adv-ok">돌아가기</button>
+    `;
+    this.root.appendChild(s);
+    s.querySelector('#adv-ok').addEventListener('click', () => this.showAdventure());
   },
 };
 

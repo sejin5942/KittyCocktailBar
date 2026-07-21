@@ -12,19 +12,21 @@
 // 재료 (Ingredients)
 //   tags: 효과/속성 태그 (레시피 정확도 · 손님 선호 계산에 사용)
 // -------------------------------------------------------------------------
+//   tier: 'basic' → 처음부터 보유 / 'rare' → 상점 구매(cost) 또는 모험 채집(place)
 const INGREDIENTS = [
-  { id: 'strawberry', name: '딸기',       emoji: '🍓', color: '#e23c5a', tags: ['red', 'fruit', 'sweet'] },
-  { id: 'lightning',  name: '번개 정수',   emoji: '⚡', color: '#ffe27a', tags: ['electric', 'shock'] },
-  { id: 'rum',        name: '마법의 술',   emoji: '🍶', color: '#d9a066', tags: ['alcohol', 'base'] },
-  { id: 'ice',        name: '얼음',       emoji: '🧊', color: '#bff0ff', tags: ['cold', 'base'] },
-  { id: 'lemon',      name: '레몬',       emoji: '🍋', color: '#ffe66b', tags: ['sour', 'fresh'] },
-  { id: 'mint',       name: '서리 민트',   emoji: '🌿', color: '#7fe0a0', tags: ['fresh', 'cool', 'calm'] },
-  { id: 'stardust',   name: '별가루',      emoji: '✨', color: '#ffd76b', tags: ['magic', 'sparkle'] },
-  { id: 'dragon',     name: '용의 숨결',   emoji: '🐉', color: '#ff7a3c', tags: ['fire', 'hot', 'courage'] },
-  { id: 'moon',       name: '달빛 시럽',   emoji: '🌙', color: '#e6d3ff', tags: ['sweet', 'calm', 'dream'] },
-  { id: 'grape',      name: '마법 포도',   emoji: '🍇', color: '#9b6bd6', tags: ['fruit', 'sweet', 'purple'] },
-  { id: 'blue',       name: '블루 큐라소', emoji: '🫐', color: '#4aa9ff', tags: ['blue', 'sweet'] },
-  { id: 'honey',      name: '햇살 꿀',     emoji: '🍯', color: '#ffb742', tags: ['sweet', 'warm'] },
+  { id: 'strawberry', name: '딸기',       emoji: '🍓', color: '#e23c5a', tags: ['red', 'fruit', 'sweet'], tier: 'basic' },
+  { id: 'rum',        name: '마법의 술',   emoji: '🍶', color: '#d9a066', tags: ['alcohol', 'base'],      tier: 'basic' },
+  { id: 'ice',        name: '얼음',       emoji: '🧊', color: '#bff0ff', tags: ['cold', 'base'],         tier: 'basic' },
+  { id: 'lemon',      name: '레몬',       emoji: '🍋', color: '#ffe66b', tags: ['sour', 'fresh'],        tier: 'basic' },
+  { id: 'mint',       name: '서리 민트',   emoji: '🌿', color: '#7fe0a0', tags: ['fresh', 'cool', 'calm'], tier: 'basic' },
+  { id: 'honey',      name: '햇살 꿀',     emoji: '🍯', color: '#ffb742', tags: ['sweet', 'warm'],        tier: 'basic' },
+  { id: 'grape',      name: '마법 포도',   emoji: '🍇', color: '#9b6bd6', tags: ['fruit', 'sweet', 'purple'], tier: 'basic' },
+  { id: 'blue',       name: '블루 큐라소', emoji: '🫐', color: '#4aa9ff', tags: ['blue', 'sweet'],        tier: 'basic' },
+  // 희귀 재료 (상점 구매 or 모험 채집)
+  { id: 'lightning',  name: '번개 정수',   emoji: '⚡', color: '#ffe27a', tags: ['electric', 'shock'],     tier: 'rare', cost: 60, place: '⛈️ 폭풍 벌판' },
+  { id: 'stardust',   name: '별가루',      emoji: '✨', color: '#ffd76b', tags: ['magic', 'sparkle'],     tier: 'rare', cost: 55, place: '🌌 별빛 호수' },
+  { id: 'dragon',     name: '용의 숨결',   emoji: '🐉', color: '#ff7a3c', tags: ['fire', 'hot', 'courage'], tier: 'rare', cost: 70, place: '🌋 화산 동굴' },
+  { id: 'moon',       name: '달빛 시럽',   emoji: '🌙', color: '#e6d3ff', tags: ['sweet', 'calm', 'dream'], tier: 'rare', cost: 50, place: '🌙 달빛 절벽' },
 ];
 
 const INGREDIENT_MAP = Object.fromEntries(INGREDIENTS.map(i => [i.id, i]));
@@ -80,61 +82,61 @@ const ORDERS = [
   {
     id: 'strawberry_shake', name: '딸기 셰이크', emoji: '🍓',
     want: '달콤한 딸기 셰이크 한 잔 주세요냥.',
-    recipe: ['strawberry', 'rum', 'ice'], shakes: 6, time: 16,
+    recipe: ['strawberry', 'rum', 'ice'], shakes: 6, time: 16, secret: false,
     customer: 'vampire', color: '#e23c5a',
   },
   {
     id: 'lightning', name: '번개 칵테일', emoji: '⚡',
     want: '번쩍! 짜릿하게 잠 깨는 걸로! 세게 흔들어야 한다던데?',
-    recipe: ['lightning', 'rum', 'ice'], shakes: 100, time: 40,
+    recipe: ['lightning', 'rum', 'ice'], shakes: 100, time: 40, secret: true,
     customer: 'knight', color: '#ffe27a',
   },
   {
     id: 'star_martini', name: '별빛 마티니', emoji: '✨',
     want: '정확한 배합의 별빛 마티니를 원한다.',
-    recipe: ['stardust', 'moon', 'blue'], shakes: 20, time: 20,
+    recipe: ['stardust', 'moon', 'blue'], shakes: 20, time: 20, secret: true,
     customer: 'mage', color: '#b6a4ff',
   },
   {
     id: 'lava_punch', name: '용암 펀치', emoji: '🐉',
     want: '몸이 후끈해지는 뜨거운 펀치가 필요해!',
-    recipe: ['dragon', 'honey', 'lemon'], shakes: 40, time: 24,
+    recipe: ['dragon', 'honey', 'lemon'], shakes: 40, time: 24, secret: true,
     customer: 'knight', color: '#ff7a3c',
   },
   {
     id: 'frost_mojito', name: '서리 모히토', emoji: '🌿',
     want: '시원하고 부드러운 걸로 부탁해요~',
-    recipe: ['mint', 'ice', 'lemon'], shakes: 12, time: 16,
+    recipe: ['mint', 'ice', 'lemon'], shakes: 12, time: 16, secret: false,
     customer: 'ghost', color: '#7fe0a0',
   },
   {
     id: 'grape_fizz', name: '포도 피즈', emoji: '🍇',
     want: '뭔가 이상하고 재밌는 거! 포도로!',
-    recipe: ['grape', 'rum', 'honey'], shakes: 15, time: 16,
+    recipe: ['grape', 'rum', 'honey'], shakes: 15, time: 16, secret: false,
     customer: 'goblin', color: '#9b6bd6',
   },
   {
     id: 'moon_dream', name: '달빛 몽환주', emoji: '🌙',
     want: '잠이 솔솔 오는 몽환적인 한 잔~',
-    recipe: ['moon', 'blue', 'stardust'], shakes: 25, time: 22,
+    recipe: ['moon', 'blue', 'stardust'], shakes: 25, time: 22, secret: true,
     customer: 'ghost', color: '#4aa9ff',
   },
   {
     id: 'mystery_blue', name: '미스터리 블루', emoji: '🔍',
     want: '수상한 사건을 조사 중이야. 머리가 맑아지는 한 잔을 부탁한다냥.',
-    recipe: ['blue', 'stardust', 'lemon'], shakes: 30, time: 22,
+    recipe: ['blue', 'stardust', 'lemon'], shakes: 30, time: 22, secret: true,
     customer: 'detective', color: '#4aa9ff',
   },
   {
     id: 'ocean_wave', name: '인어의 물결', emoji: '🧜',
     want: '바닷속처럼 시원하고 부드러운 한 잔이 마시고 싶다냥~',
-    recipe: ['blue', 'mint', 'ice'], shakes: 18, time: 18,
+    recipe: ['blue', 'mint', 'ice'], shakes: 18, time: 18, secret: false,
     customer: 'mermaid', color: '#7fe0d0',
   },
   {
     id: 'legend', name: '전설의 칵테일', emoji: '🌟',
     want: '마왕을 쓰러뜨릴 전설의 칵테일을 만들어줘!',
-    recipe: ['dragon', 'stardust', 'strawberry', 'lightning'], shakes: 60, time: 30,
+    recipe: ['dragon', 'stardust', 'strawberry', 'lightning'], shakes: 60, time: 30, secret: true,
     customer: 'hero', color: '#ffd76b',
   },
 ];
