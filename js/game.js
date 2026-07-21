@@ -78,17 +78,17 @@ Game.startDay = function () {
   this.charmUsedToday = 0;
   this.customerIndex = 0;
   this.dayOrders = [];
-  // 일반 손님은 랜덤으로 뽑되(탐정 제외해 중복 방지)…
-  const pool = ORDERS.filter(o => o.customer !== 'detective');
+  // 일반 손님은 랜덤으로 뽑되, 스프라이트 전용 손님(탐정·인어)은 제외해 중복 방지
+  const special = ['detective', 'mermaid'];
+  const pool = ORDERS.filter(o => !special.includes(o.customer));
   for (let i = 0; i < CUSTOMERS_PER_DAY; i++) {
     this.dayOrders.push(pool[Math.floor(Math.random() * pool.length)]);
   }
-  // …탐정 고양이는 매일 반드시 한 번 등장(첫날은 첫 손님으로).
+  // 매일 고정: 첫 손님 = 탐정, 둘째 손님 = 인어
   const det = ORDERS.find(o => o.customer === 'detective');
-  if (det) {
-    const slot = this.day === 1 ? 0 : Math.floor(Math.random() * CUSTOMERS_PER_DAY);
-    this.dayOrders[slot] = det;
-  }
+  const mer = ORDERS.find(o => o.customer === 'mermaid');
+  if (det) this.dayOrders[0] = det;
+  if (mer && CUSTOMERS_PER_DAY > 1) this.dayOrders[1] = mer;
   UI.showDayIntro(this.day, () => this.nextCustomer());
 };
 

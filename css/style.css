@@ -173,6 +173,20 @@ h2.tight, h1.tight { margin: 0; }
 }
 @keyframes detPlay   { from { background-position: 0 0; } to { background-position: -1248px 0; } }
 @keyframes detPlaySm { from { background-position: 0 0; } to { background-position: -736px 0; } }
+
+.sprite-cat.mermaid {
+  width: 112px; height: 165px;      /* 프레임 비율 170:250 ≈ 0.68 */
+  background-image: url(../assets/mermaid-cat.png);
+  background-size: 896px 165px;     /* 8 × 112 */
+  animation: merPlay 1.1s steps(8) infinite, catBob 2.6s ease-in-out infinite;
+}
+.sprite-cat.mermaid.sm {
+  width: 66px; height: 97px;
+  background-size: 528px 97px;      /* 8 × 66 */
+  animation: merPlaySm 1.1s steps(8) infinite, catBob 2.6s ease-in-out infinite;
+}
+@keyframes merPlay   { from { background-position: 0 0; } to { background-position: -896px 0; } }
+@keyframes merPlaySm { from { background-position: 0 0; } to { background-position: -528px 0; } }
 @keyframes catBob    { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) {
   .sprite-cat { animation: none !important; background-position: 0 0 !important; }
