@@ -327,5 +327,34 @@ h2.tight, h1.tight { margin: 0; }
 .shop-info { flex: 1; text-align: left; }
 .shop-name { font-weight: bold; }
 
+.shop-actions { display: flex; gap: 10px; }
+.shop-actions .btn { flex: 1; }
+.shop-actions .btn.primary { flex: 2; }
+
+/* ---- 손님 도감 ---- */
+.dex-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dex-header h2 { margin: 0; }
+.dex-progress { color: var(--muted); font-size: 13px; font-weight: bold; white-space: nowrap; }
+.dex-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.dex-card {
+  background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 16px;
+  padding: 12px 10px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  box-shadow: 0 0 26px -16px var(--cc, var(--neon));
+}
+.dex-card.locked { opacity: .8; }
+.dex-face { height: 104px; display: flex; align-items: flex-end; justify-content: center; }
+.dex-emoji { font-size: 54px; }
+.dex-locked-face { font-size: 54px; filter: grayscale(1) brightness(.55); align-self: center; }
+.dex-name { font-weight: bold; font-size: 15px; }
+.dex-pref { font-size: 11px; color: var(--muted); line-height: 1.35; }
+.dex-drink { font-size: 11px; color: var(--gold); line-height: 1.35; }
+.dex-quip { font-size: 11px; color: var(--pink); font-style: italic; line-height: 1.35; }
+.dex-hearts { font-size: 13px; letter-spacing: 1px; color: #ff6b8a; margin-top: 2px; }
+.dex-visits { color: var(--muted); font-size: 11px; letter-spacing: 0; }
+
+/* 도감 카드 안 스프라이트는 바운스 없이 살짝 축소 */
+.dex-card .sprite-cat { filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+
 /* 스크롤바 최소화 */
 #app::-webkit-scrollbar { width: 0; }

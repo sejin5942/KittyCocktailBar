@@ -29,6 +29,15 @@ const INGREDIENTS = [
 
 const INGREDIENT_MAP = Object.fromEntries(INGREDIENTS.map(i => [i.id, i]));
 
+// 손님 선호 설명 (도감 표시용)
+const PREF_DESC = {
+  strong:  '흔들기 많은 강한 칵테일을 선호',
+  precise: '정확한 재료 배합을 요구',
+  weird:   '이상하고 엉뚱한 결과를 좋아함',
+  red:     '붉은 재료가 들어간 칵테일을 선호',
+  gentle:  '여유롭게 완성하면 좋아함',
+};
+
 // -------------------------------------------------------------------------
 // 손님 유형 (Customer types)
 //   preference: 선호 판정 요소 (보너스)
