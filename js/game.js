@@ -57,7 +57,19 @@ window.addEventListener('DOMContentLoaded', () => {
     await Game.sensor.enable();   // 사용자 제스처 안에서 센서 권한 요청
     Game.startDay();
   });
+
+  // 테스트용: 다음 손님으로 건너뛰기
+  document.getElementById('skip-btn').addEventListener('click', () => Game.skipCustomer());
 });
+
+// 현재 손님을 건너뛰고 바로 다음 손님으로 (테스트용)
+Game.skipCustomer = function () {
+  this.finished = true;                 // 진행 중 콜백 무효화
+  this.stopPatience();
+  if (this.sensor) { this.sensor.stop(); this.sensor.onBeat = null; this.sensor.onShake = null; }
+  this.customerIndex++;
+  this.nextCustomer();
+};
 
 /* ------------------------------------------------------------------ */
 /* 하루 / 손님 진행                                                   */
