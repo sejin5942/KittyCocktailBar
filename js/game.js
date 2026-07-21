@@ -42,6 +42,9 @@ const Game = {
   _patienceRAF: 0,
   _patienceStart: 0,
 
+  // ---- 손님 도감 (localStorage에 저장) ----
+  met: {},                 // customerKey → { seen:true, visits:n }
+
   sensor: null,
 };
 
@@ -51,16 +54,33 @@ const Game = {
 window.addEventListener('DOMContentLoaded', () => {
   Game.sensor = new ShakeSensor();
   UI.cache();
-  UI.showScreen('title');
-
-  document.getElementById('start-btn').addEventListener('click', async () => {
-    await Game.sensor.enable();   // 사용자 제스처 안에서 센서 권한 요청
-    Game.startDay();
-  });
+  Game.loadCollection();
+  UI.showTitle();
 
   // 테스트용: 다음 손님으로 건너뛰기
   document.getElementById('skip-btn').addEventListener('click', () => Game.skipCustomer());
 });
+
+/* ------------------------------------------------------------------ */
+/* 손님 도감 저장/기록                                                */
+/* ------------------------------------------------------------------ */
+Game.loadCollection = function () {
+  try { this.met = JSON.parse(localStorage.getItem('kcb_met') || '{}') || {}; }
+  catch (e) { this.met = {}; }
+};
+Game.saveCollection = function () {
+  try { localStorage.setItem('kcb_met', JSON.stringify(this.met)); } catch (e) { /* 무시 */ }
+};
+Game.seeCustomer = function (key) {            // 손님이 등장(발견)
+  const m = this.met[key] || (this.met[key] = { seen: false, visits: 0 });
+  m.seen = true;
+  this.saveCollection();
+};
+Game.recordVisit = function (key) {            // 손님 응대 완료(친밀도 +1)
+  const m = this.met[key] || (this.met[key] = { seen: false, visits: 0 });
+  m.seen = true; m.visits = (m.visits || 0) + 1;
+  this.saveCollection();
+};
 
 // 현재 손님을 건너뛰고 바로 다음 손님으로 (테스트용)
 Game.skipCustomer = function () {
@@ -100,6 +120,7 @@ Game.nextCustomer = function () {
   this.requiredShakes = this.order.shakes;
   this.completed = false;
   this.finished = false;
+  this.seeCustomer(this.order.customer);   // 도감: 발견 기록
   UI.showOrder(this.order, this.customerIndex + 1, CUSTOMERS_PER_DAY);
 };
 
@@ -177,6 +198,7 @@ Game.finishOrder = function (success) {
   Game.sensor.stop();
   Game.sensor.onBeat = null;
   Game.sensor.onShake = null;
+  this.recordVisit(this.order.customer);   // 도감: 친밀도 +1
   UI.showResult();
 };
 

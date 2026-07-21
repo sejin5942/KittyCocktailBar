@@ -29,6 +29,88 @@ const UI = {
     if (b) b.style.display = on ? 'block' : 'none';
   },
 
+  /* =================================================================
+   * 타이틀 화면 (도감 버튼 포함)
+   * ================================================================= */
+  showTitle() {
+    this.hud.style.display = 'none';
+    this.showSkip(false);
+    this.clear();
+    const s = el('div', 'screen center fade-in');
+    s.innerHTML = `
+      <div class="title-orbs">
+        <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span>
+      </div>
+      <div class="big-emoji title-cat">🐱🍸</div>
+      <h1 class="game-title">고양이 판타지<br>쉐이크</h1>
+      <p class="muted">판타지 바의 고양이 바텐더가 되어<br>손님의 주문에 맞는 마법 물약을 흔들어 만드세요냥!</p>
+      <button class="btn primary big" id="start-btn">가게 시작하기 ✨</button>
+      <button class="btn" id="dex-btn">📖 손님 도감</button>
+      <p class="muted small foot">📱 휴대폰을 흔들어 조작해요 · PC는 드래그/Space로 대체</p>
+    `;
+    this.root.appendChild(s);
+    s.querySelector('#start-btn').addEventListener('click', async () => {
+      await Game.sensor.enable();   // 사용자 제스처 안에서 센서 권한 요청
+      Game.startDay();
+    });
+    s.querySelector('#dex-btn').addEventListener('click', () => this.showCollection('title'));
+  },
+
+  /* =================================================================
+   * 손님 도감
+   * ================================================================= */
+  showCollection(origin) {
+    this.hud.style.display = 'none';
+    this.showSkip(false);
+    this.clear();
+    const keys = Object.keys(CUSTOMERS);
+    const seenCount = keys.filter(k => Game.met[k] && Game.met[k].seen).length;
+    const s = el('div', 'screen fade-in');
+    s.innerHTML = `
+      <div class="dex-header">
+        <button class="btn small" id="dex-back">← 뒤로</button>
+        <h2 class="tight">손님 도감</h2>
+        <span class="dex-progress">발견 ${seenCount}/${keys.length}</span>
+      </div>
+      <div class="dex-grid" id="dex-grid"></div>
+    `;
+    this.root.appendChild(s);
+
+    const grid = s.querySelector('#dex-grid');
+    keys.forEach(k => {
+      const cust = CUSTOMERS[k];
+      const m = Game.met[k];
+      const seen = !!(m && m.seen);
+      const visits = (m && m.visits) || 0;
+      const orders = ORDERS.filter(o => o.customer === k).map(o => `${o.emoji} ${o.name}`);
+      const card = el('div', 'dex-card' + (seen ? '' : ' locked'));
+      card.style.setProperty('--cc', cust.color);
+
+      let face;
+      if (!seen) face = `<div class="dex-locked-face">❔</div>`;
+      else if (cust.sprite) face = `<div class="sprite-cat ${cust.sprite} sm"></div>`;
+      else face = `<div class="big-emoji dex-emoji">${cust.emoji}</div>`;
+
+      card.innerHTML = seen ? `
+        <div class="dex-face">${face}</div>
+        <div class="dex-name">${cust.name}</div>
+        <div class="dex-pref">${PREF_DESC[cust.preference] || ''}</div>
+        <div class="dex-drink">🍸 ${orders.join(' · ')}</div>
+        <div class="dex-quip">“${cust.quip.happy}”</div>
+        <div class="dex-hearts">${heartStr(visits)} <span class="dex-visits">${visits}회</span></div>
+      ` : `
+        <div class="dex-face">${face}</div>
+        <div class="dex-name">???</div>
+        <div class="dex-pref muted">아직 만나지 못한 손님</div>
+      `;
+      grid.appendChild(card);
+    });
+
+    s.querySelector('#dex-back').addEventListener('click', () => {
+      if (origin === 'shop') this.showShop(); else this.showTitle();
+    });
+  },
+
   clear() { this.root.innerHTML = ''; },
 
   // 재료·흔들기 화면 상단에 공통으로 쓰는 대기 시간 바 마크업
@@ -275,9 +357,13 @@ const UI = {
       <h2 class="tight">상점 🛒</h2>
       <p class="muted small">골드로 장비를 업그레이드하세요. (보유 💰 ${Game.gold})</p>
       <div class="shop-list" id="shop-list"></div>
-      <button class="btn primary" id="next-day">다음 날 시작 🌅</button>
+      <div class="shop-actions">
+        <button class="btn" id="dex-btn">📖 도감</button>
+        <button class="btn primary" id="next-day">다음 날 시작 🌅</button>
+      </div>
     `;
     this.root.appendChild(s);
+    s.querySelector('#dex-btn').addEventListener('click', () => this.showCollection('shop'));
 
     const list = s.querySelector('#shop-list');
     UPGRADES.forEach(up => {
@@ -308,4 +394,8 @@ function pips(n, total) {
   let out = '';
   for (let i = 1; i <= total; i++) out += `<span class="pip ${i <= n ? 'on' : ''}"></span>`;
   return out;
+}
+function heartStr(visits) {           // 친밀도 하트 (최대 5칸)
+  const cap = 5, filled = Math.min(visits, cap);
+  return '❤'.repeat(filled) + '♡'.repeat(cap - filled);
 }
