@@ -66,9 +66,16 @@ Game.startDay = function () {
   this.charmUsedToday = 0;
   this.customerIndex = 0;
   this.dayOrders = [];
-  const pool = [...ORDERS];
+  // 일반 손님은 랜덤으로 뽑되(탐정 제외해 중복 방지)…
+  const pool = ORDERS.filter(o => o.customer !== 'detective');
   for (let i = 0; i < CUSTOMERS_PER_DAY; i++) {
     this.dayOrders.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  // …탐정 고양이는 매일 반드시 한 번 등장(첫날은 첫 손님으로).
+  const det = ORDERS.find(o => o.customer === 'detective');
+  if (det) {
+    const slot = this.day === 1 ? 0 : Math.floor(Math.random() * CUSTOMERS_PER_DAY);
+    this.dayOrders[slot] = det;
   }
   UI.showDayIntro(this.day, () => this.nextCustomer());
 };
