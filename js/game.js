@@ -42,11 +42,15 @@ const Game = {
   _patienceRAF: 0,
   _patienceStart: 0,
 
-  // ---- 손님 도감 (localStorage에 저장) ----
+  // ---- 도감 (localStorage에 저장) ----
   met: {},                 // customerKey → { seen:true, visits:n }
+  drinks: {},              // orderId → { made:true, count:n, best:gradeKey }
 
   sensor: null,
 };
+
+// 등급 우열 (음료 도감의 '최고 등급' 비교용)
+const GRADE_RANK = { fail: 0, mystery: 1, weak: 2, good: 3, perfect: 4 };
 
 /* ------------------------------------------------------------------ */
 /* 초기화                                                             */
@@ -55,6 +59,7 @@ window.addEventListener('DOMContentLoaded', () => {
   Game.sensor = new ShakeSensor();
   UI.cache();
   Game.loadCollection();
+  Game.loadDrinks();
   UI.showTitle();
 
   // 테스트용: 다음 손님으로 건너뛰기
@@ -80,6 +85,21 @@ Game.recordVisit = function (key) {            // 손님 응대 완료(친밀도
   const m = this.met[key] || (this.met[key] = { seen: false, visits: 0 });
   m.seen = true; m.visits = (m.visits || 0) + 1;
   this.saveCollection();
+};
+
+Game.loadDrinks = function () {
+  try { this.drinks = JSON.parse(localStorage.getItem('kcb_drinks') || '{}') || {}; }
+  catch (e) { this.drinks = {}; }
+};
+Game.saveDrinks = function () {
+  try { localStorage.setItem('kcb_drinks', JSON.stringify(this.drinks)); } catch (e) { /* 무시 */ }
+};
+Game.recordDrink = function (orderId, gradeKey) {   // 칵테일 제조 완료 기록
+  const d = this.drinks[orderId] || (this.drinks[orderId] = { made: false, count: 0, best: 'mystery' });
+  d.made = true;
+  d.count = (d.count || 0) + 1;
+  if (!d.best || GRADE_RANK[gradeKey] > GRADE_RANK[d.best]) d.best = gradeKey;
+  this.saveDrinks();
 };
 
 // 현재 손님을 건너뛰고 바로 다음 손님으로 (테스트용)
@@ -274,6 +294,9 @@ Game.judge = function () {
   const sideEffect = grade.sideEffect ? SIDE_EFFECTS[Math.floor(Math.random() * SIDE_EFFECTS.length)] : null;
   const happy = grade.key !== 'fail' && (grade.key !== 'mystery' || cust.preference === 'weird');
   const quip = happy ? cust.quip.happy : cust.quip.sad;
+
+  // 음료 도감: 제대로 완성(정체불명 제외)한 칵테일만 레시피 기록
+  if (this.completed && grade.key !== 'mystery') this.recordDrink(this.order.id, grade.key);
 
   return { grade, gold, rep, sideEffect, quip, prefNote, recipe, timeRatio };
 };
