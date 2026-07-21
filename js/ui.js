@@ -86,10 +86,11 @@ const UI = {
       const card = el('div', 'dex-card' + (seen ? '' : ' locked'));
       card.style.setProperty('--cc', cust.color);
 
-      let face;
-      if (!seen) face = `<div class="dex-locked-face">❔</div>`;
-      else if (cust.sprite) face = `<div class="sprite-cat ${cust.sprite} sm"></div>`;
-      else face = `<div class="big-emoji dex-emoji">${cust.emoji}</div>`;
+      // 얼굴: 발견 전에도 같은 모양을 렌더하되 'sil'(실루엣) 클래스로 가림
+      const sil = seen ? '' : ' sil';
+      const face = cust.sprite
+        ? `<div class="sprite-cat ${cust.sprite} sm${sil}"></div>`
+        : `<div class="big-emoji dex-emoji${sil}">${cust.emoji}</div>`;
 
       card.innerHTML = seen ? `
         <div class="dex-face">${face}</div>

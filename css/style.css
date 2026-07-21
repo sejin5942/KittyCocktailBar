@@ -345,7 +345,12 @@ h2.tight, h1.tight { margin: 0; }
 .dex-card.locked { opacity: .8; }
 .dex-face { height: 104px; display: flex; align-items: flex-end; justify-content: center; }
 .dex-emoji { font-size: 54px; }
-.dex-locked-face { font-size: 54px; filter: grayscale(1) brightness(.55); align-self: center; }
+/* 미발견 손님: 실제 모양을 실루엣으로 표시 (발견하면 sil 제거 → 원본 이미지) */
+.dex-card .sil {
+  filter: brightness(0) invert(.28) opacity(.9) !important;
+  animation: none !important;
+  background-position: 0 0 !important;
+}
 .dex-name { font-weight: bold; font-size: 15px; }
 .dex-pref { font-size: 11px; color: var(--muted); line-height: 1.35; }
 .dex-drink { font-size: 11px; color: var(--gold); line-height: 1.35; }
