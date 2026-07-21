@@ -51,6 +51,9 @@ const CUSTOMERS = {
              quip: { happy: '부드럽게 스며든다냥~', sad: '스르륵... 그냥 갈게.' } },
   hero:    { name: '용사',    emoji: '🐱🌟', preference: 'precise', color: '#ffd27a',
              quip: { happy: '전설의 칵테일이다냥!', sad: '전설이라기엔 아쉽군.' } },
+  // 스프라이트 애니메이션 손님 (탐정 고양이)
+  detective: { name: '탐정', emoji: '🐱🔍', preference: 'precise', color: '#9db4d8', sprite: 'detective',
+             quip: { happy: '훌륭해. 사건 해결의 실마리가 보인다냥!', sad: '흐음... 증거가 부족하군.' } },
 };
 
 // -------------------------------------------------------------------------
@@ -104,6 +107,12 @@ const ORDERS = [
     want: '잠이 솔솔 오는 몽환적인 한 잔~',
     recipe: ['moon', 'blue', 'stardust'], shakes: 25, time: 22,
     customer: 'ghost', color: '#4aa9ff',
+  },
+  {
+    id: 'mystery_blue', name: '미스터리 블루', emoji: '🔍',
+    want: '수상한 사건을 조사 중이야. 머리가 맑아지는 한 잔을 부탁한다냥.',
+    recipe: ['blue', 'stardust', 'lemon'], shakes: 30, time: 22,
+    customer: 'detective', color: '#4aa9ff',
   },
   {
     id: 'legend', name: '전설의 칵테일', emoji: '🌟',

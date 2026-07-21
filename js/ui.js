@@ -70,10 +70,13 @@ const UI = {
     this.clear();
     const cust = CUSTOMERS[order.customer];
     const s = el('div', 'screen fade-in');
+    const faceHTML = cust.sprite
+      ? `<div class="sprite-cat ${cust.sprite}"></div>`
+      : `<div class="customer-face">${cust.emoji}</div>`;
     s.innerHTML = `
       <div class="progress-pips">${pips(n, total)}</div>
       <div class="customer-card" style="--cc:${cust.color}">
-        <div class="customer-face">${cust.emoji}</div>
+        ${faceHTML}
         <div class="customer-name">${cust.name} 손님</div>
         <div class="speech-bubble">${order.want}</div>
       </div>
@@ -199,6 +202,9 @@ const UI = {
     this.clear();
     const cust = CUSTOMERS[Game.order.customer];
     const s = el('div', `screen center fade-in result ${r.grade.cls}`);
+    const reactHTML = cust.sprite
+      ? `<div class="sprite-cat ${cust.sprite} sm"></div>`
+      : `<span class="react-face">${cust.emoji}</span>`;
 
     const doneShakes = Math.min(Game.requiredShakes, Math.floor(Game.shakeProgress));
     const rows = [
@@ -211,7 +217,7 @@ const UI = {
       <div class="result-emoji ${r.grade.key === 'fail' ? 'boom' : ''}">${r.grade.emoji}</div>
       <h2 class="result-title">${r.grade.title}</h2>
       <div class="customer-reaction">
-        <span class="react-face">${cust.emoji}</span>
+        ${reactHTML}
         <span class="speech-bubble small">${r.quip}</span>
       </div>
       ${r.prefNote ? `<div class="pref-note">💗 ${r.prefNote}</div>` : ''}
