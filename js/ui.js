@@ -23,6 +23,12 @@ const UI = {
     if (name === 'title') this.hud.style.display = 'none';
   },
 
+  // 테스트용 다음 손님 버튼 표시/숨김
+  showSkip(on) {
+    const b = document.getElementById('skip-btn');
+    if (b) b.style.display = on ? 'block' : 'none';
+  },
+
   clear() { this.root.innerHTML = ''; },
 
   // 재료·흔들기 화면 상단에 공통으로 쓰는 대기 시간 바 마크업
@@ -50,6 +56,7 @@ const UI = {
    * ================================================================= */
   showDayIntro(day, next) {
     this.renderHUD();
+    this.showSkip(false);
     this.clear();
     const card = el('div', 'screen center fade-in');
     card.innerHTML = `
@@ -67,6 +74,7 @@ const UI = {
    * ================================================================= */
   showOrder(order, n, total) {
     this.renderHUD();
+    this.showSkip(true);
     this.clear();
     const cust = CUSTOMERS[order.customer];
     const s = el('div', 'screen fade-in');
@@ -242,6 +250,7 @@ const UI = {
    * ================================================================= */
   showDayEnd(day, gold, rep, next) {
     this.renderHUD();
+    this.showSkip(false);
     this.clear();
     const s = el('div', 'screen center fade-in');
     s.innerHTML = `
@@ -259,6 +268,7 @@ const UI = {
 
   renderShop() {
     this.renderHUD();
+    this.showSkip(false);
     this.clear();
     const s = el('div', 'screen fade-in');
     s.innerHTML = `
