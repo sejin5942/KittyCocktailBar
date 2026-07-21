@@ -46,6 +46,10 @@ const Game = {
   met: {},                 // customerKey → { seen:true, visits:n }
   drinks: {},              // orderId → { made:true, count:n, best:gradeKey }
 
+  // ---- 재료 보유 (localStorage에 저장) ----
+  ownedIngredients: null,  // Set<ingredientId>
+  adventuredToday: false,  // 모험 하루 1회 제한
+
   sensor: null,
 };
 
@@ -60,6 +64,7 @@ window.addEventListener('DOMContentLoaded', () => {
   UI.cache();
   Game.loadCollection();
   Game.loadDrinks();
+  Game.loadIngredients();
   UI.showTitle();
 
   // 테스트용: 다음 손님으로 건너뛰기
@@ -102,6 +107,37 @@ Game.recordDrink = function (orderId, gradeKey) {   // 칵테일 제조 완료 �
   this.saveDrinks();
 };
 
+/* ------------------------------------------------------------------ */
+/* 재료 보유 (상점 구매 / 모험 채집)                                  */
+/* ------------------------------------------------------------------ */
+Game.loadIngredients = function () {
+  let arr = null;
+  try { arr = JSON.parse(localStorage.getItem('kcb_ing') || 'null'); } catch (e) { arr = null; }
+  if (!Array.isArray(arr)) arr = INGREDIENTS.filter(i => i.tier === 'basic').map(i => i.id);
+  this.ownedIngredients = new Set(arr);
+  INGREDIENTS.forEach(i => { if (i.tier === 'basic') this.ownedIngredients.add(i.id); }); // 기본은 항상 보유
+  this.saveIngredients();
+};
+Game.saveIngredients = function () {
+  try { localStorage.setItem('kcb_ing', JSON.stringify([...this.ownedIngredients])); } catch (e) { /* 무시 */ }
+};
+Game.hasIngredient = function (id) { return this.ownedIngredients.has(id); };
+Game.buyIngredient = function (id) {              // 상점에서 골드로 구매
+  const ing = INGREDIENT_MAP[id];
+  if (!ing || ing.tier !== 'rare' || this.hasIngredient(id) || this.gold < ing.cost) return false;
+  this.gold -= ing.cost;
+  this.ownedIngredients.add(id);
+  this.saveIngredients();
+  return true;
+};
+Game.gatherIngredient = function (id) {           // 모험에서 채집 (하루 1회)
+  if (this.adventuredToday || this.hasIngredient(id)) return false;
+  this.ownedIngredients.add(id);
+  this.adventuredToday = true;
+  this.saveIngredients();
+  return true;
+};
+
 // 현재 손님을 건너뛰고 바로 다음 손님으로 (테스트용)
 Game.skipCustomer = function () {
   this.finished = true;                 // 진행 중 콜백 무효화
@@ -116,6 +152,7 @@ Game.skipCustomer = function () {
 /* ------------------------------------------------------------------ */
 Game.startDay = function () {
   this.charmUsedToday = 0;
+  this.adventuredToday = false;
   this.customerIndex = 0;
   this.dayOrders = [];
   // 일반 손님은 랜덤으로 뽑되, 스프라이트 전용 손님(탐정·인어)은 제외해 중복 방지
@@ -154,6 +191,7 @@ Game.beginService = function () {
 /* 재료 선택                                                          */
 /* ------------------------------------------------------------------ */
 Game.toggleIngredient = function (id) {
+  if (!this.hasIngredient(id)) return;          // 미보유 재료는 선택 불가
   const idx = this.selected.indexOf(id);
   if (idx >= 0) this.selected.splice(idx, 1);
   else this.selected.push(id);
