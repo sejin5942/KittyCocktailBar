@@ -65,11 +65,40 @@ window.addEventListener('DOMContentLoaded', () => {
   Game.loadCollection();
   Game.loadDrinks();
   Game.loadIngredients();
-  UI.showTitle();
+  UI.showHub();               // 메인 화면 = 칵테일 바 허브
 
   // 테스트용: 다음 손님으로 건너뛰기
   document.getElementById('skip-btn').addEventListener('click', () => Game.skipCustomer());
 });
+
+/* ------------------------------------------------------------------ */
+/* 허브(칵테일 바) 중심 흐름                                          */
+/* ------------------------------------------------------------------ */
+Game.enterHub = function () { UI.showHub(); };
+
+// 영업 시작: 오늘의 손님을 받는다
+Game.startServing = function () {
+  this.customerIndex = 0;
+  this.dayOrders = [];
+  const special = ['detective', 'mermaid'];
+  const pool = ORDERS.filter(o => !special.includes(o.customer));
+  for (let i = 0; i < CUSTOMERS_PER_DAY; i++) {
+    this.dayOrders.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  const det = ORDERS.find(o => o.customer === 'detective');
+  const mer = ORDERS.find(o => o.customer === 'mermaid');
+  if (det) this.dayOrders[0] = det;
+  if (mer && CUSTOMERS_PER_DAY > 1) this.dayOrders[1] = mer;
+  this.nextCustomer();
+};
+
+// 하루 마감 후 허브로 복귀 (다음 날 · 일일 제한 초기화)
+Game.finishDay = function () {
+  this.day++;
+  this.charmUsedToday = 0;
+  this.adventuredToday = false;
+  this.enterHub();
+};
 
 /* ------------------------------------------------------------------ */
 /* 손님 도감 저장/기록                                                */
@@ -148,27 +177,8 @@ Game.skipCustomer = function () {
 };
 
 /* ------------------------------------------------------------------ */
-/* 하루 / 손님 진행                                                   */
+/* 손님 진행                                                          */
 /* ------------------------------------------------------------------ */
-Game.startDay = function () {
-  this.charmUsedToday = 0;
-  this.adventuredToday = false;
-  this.customerIndex = 0;
-  this.dayOrders = [];
-  // 일반 손님은 랜덤으로 뽑되, 스프라이트 전용 손님(탐정·인어)은 제외해 중복 방지
-  const special = ['detective', 'mermaid'];
-  const pool = ORDERS.filter(o => !special.includes(o.customer));
-  for (let i = 0; i < CUSTOMERS_PER_DAY; i++) {
-    this.dayOrders.push(pool[Math.floor(Math.random() * pool.length)]);
-  }
-  // 매일 고정: 첫 손님 = 탐정, 둘째 손님 = 인어
-  const det = ORDERS.find(o => o.customer === 'detective');
-  const mer = ORDERS.find(o => o.customer === 'mermaid');
-  if (det) this.dayOrders[0] = det;
-  if (mer && CUSTOMERS_PER_DAY > 1) this.dayOrders[1] = mer;
-  UI.showDayIntro(this.day, () => this.nextCustomer());
-};
-
 Game.nextCustomer = function () {
   if (this.customerIndex >= this.dayOrders.length) return this.endDay();
   this.order = this.dayOrders[this.customerIndex];
@@ -351,10 +361,10 @@ const GRADES = {
 };
 
 /* ------------------------------------------------------------------ */
-/* 하루 종료 / 상점                                                   */
+/* 하루 종료 → 허브로 복귀                                            */
 /* ------------------------------------------------------------------ */
 Game.endDay = function () {
-  UI.showDayEnd(this.day, this.gold, this.reputation, () => UI.showShop());
+  UI.showDayEnd(this.day, this.gold, this.reputation, () => this.finishDay());
 };
 
 Game.buyUpgrade = function (id) {
@@ -364,9 +374,4 @@ Game.buyUpgrade = function (id) {
   this.upgrades[id] = true;
   for (const k in up.effect) this.effects[k] = (this.effects[k] || 0) + up.effect[k];
   UI.renderShop();
-};
-
-Game.leaveShop = function () {
-  this.day++;
-  this.startDay();
 };

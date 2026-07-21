@@ -30,7 +30,91 @@ const UI = {
   },
 
   /* =================================================================
-   * 타이틀 화면 (도감 버튼 포함)
+   * 메인 화면 — 칵테일 바 허브
+   * ================================================================= */
+  showHub() {
+    this.renderHUD();
+    this.showSkip(false);
+    this.clear();
+    const s = el('div', 'screen hub-screen fade-in');
+    s.innerHTML = `
+      <div class="bar-scene">
+        <div class="neon-sign">🐾 고양이 칵테일 바 🍸</div>
+        <div class="bar-shelves" id="bar-shelves"></div>
+        <div class="bar-counter">
+          <div class="counter-glasses">🍸 🍹 🧉 🍶</div>
+          <div class="bartender">🐱</div>
+        </div>
+      </div>
+      <button class="btn primary big hub-serve" id="hub-serve">🍸 영업 시작</button>
+      <div class="hub-grid">
+        <button class="btn hub-nav" id="hub-adv"><span class="hub-ic">🗺️</span>모험 가기</button>
+        <button class="btn hub-nav" id="hub-shop"><span class="hub-ic">🛒</span>상점</button>
+        <button class="btn hub-nav" id="hub-inv"><span class="hub-ic">🎒</span>인벤토리</button>
+        <button class="btn hub-nav" id="hub-dex"><span class="hub-ic">📖</span>도감</button>
+      </div>
+    `;
+    this.root.appendChild(s);
+
+    // 선반의 병 = 재료 컬렉션 (보유하면 빛나고, 미보유는 흐릿)
+    const shelves = s.querySelector('#bar-shelves');
+    INGREDIENTS.forEach(ing => {
+      const owned = Game.hasIngredient(ing.id);
+      const bt = el('div', 'bar-bottle' + (owned ? '' : ' dim'));
+      bt.style.setProperty('--ic', ing.color);
+      bt.title = ing.name;
+      shelves.appendChild(bt);
+    });
+
+    s.querySelector('#hub-serve').addEventListener('click', async () => {
+      if (!Game._sensorReady) { await Game.sensor.enable(); Game._sensorReady = true; }
+      Game.startServing();
+    });
+    s.querySelector('#hub-adv').addEventListener('click', () => this.showAdventure());
+    s.querySelector('#hub-shop').addEventListener('click', () => this.showShop());
+    s.querySelector('#hub-inv').addEventListener('click', () => this.showInventory());
+    s.querySelector('#hub-dex').addEventListener('click', () => this.showCollection());
+  },
+
+  /* =================================================================
+   * 인벤토리 — 보유 재료
+   * ================================================================= */
+  showInventory() {
+    this.renderHUD();
+    this.showSkip(false);
+    this.clear();
+    const owned = INGREDIENTS.filter(i => Game.hasIngredient(i.id)).length;
+    const s = el('div', 'screen fade-in');
+    s.innerHTML = `
+      <div class="dex-header">
+        <button class="btn small" id="inv-back">← 가게로</button>
+        <h2 class="tight">🎒 인벤토리</h2>
+        <span class="dex-progress">보유 ${owned}/${INGREDIENTS.length}</span>
+      </div>
+      <div class="inv-grid" id="inv-grid"></div>
+    `;
+    this.root.appendChild(s);
+
+    const grid = s.querySelector('#inv-grid');
+    INGREDIENTS.forEach(ing => {
+      const has = Game.hasIngredient(ing.id);
+      const card = el('div', 'inv-card' + (has ? '' : ' locked'));
+      card.style.setProperty('--ic', ing.color);
+      const sub = has
+        ? (ing.tier === 'rare' ? '✨ 희귀 · 보유' : '기본 · 보유')
+        : `🔒 상점 💰${ing.cost} · ${ing.place}`;
+      card.innerHTML = `
+        <div class="inv-emoji${has ? '' : ' dim'}">${ing.emoji}</div>
+        <div class="inv-name">${ing.name}</div>
+        <div class="inv-sub muted">${sub}</div>
+      `;
+      grid.appendChild(card);
+    });
+    s.querySelector('#inv-back').addEventListener('click', () => this.showHub());
+  },
+
+  /* =================================================================
+   * 타이틀 화면 (미사용 · 허브가 메인)
    * ================================================================= */
   showTitle() {
     this.hud.style.display = 'none';
@@ -83,9 +167,7 @@ const UI = {
 
     s.querySelectorAll('.dex-tab').forEach(t =>
       t.addEventListener('click', () => this.showCollection(origin, t.dataset.tab)));
-    s.querySelector('#dex-back').addEventListener('click', () => {
-      if (origin === 'shop') this.showShop(); else this.showTitle();
-    });
+    s.querySelector('#dex-back').addEventListener('click', () => this.showHub());
   },
 
   renderCustomerDex(s) {
@@ -394,10 +476,10 @@ const UI = {
       <h1>Day ${day} 영업 종료!</h1>
       <p class="muted">오늘의 정산</p>
       <div class="tally"><div>💰 보유 골드 <b>${gold}</b></div><div>⭐ 평판 <b>${rep}</b></div></div>
-      <button class="btn primary" id="to-shop">상점으로 🛒</button>
+      <button class="btn primary" id="to-hub">🍸 가게로 돌아가기</button>
     `;
     this.root.appendChild(s);
-    s.querySelector('#to-shop').addEventListener('click', next);
+    s.querySelector('#to-hub').addEventListener('click', next);
   },
 
   showShop() { this.renderShop(); },
@@ -415,14 +497,11 @@ const UI = {
       <h3 class="shop-h">⚙️ 장비 업그레이드</h3>
       <div class="shop-list" id="shop-list"></div>
       <div class="shop-actions">
-        <button class="btn" id="adv-btn">🗺️ 모험</button>
-        <button class="btn" id="dex-btn">📖 도감</button>
-        <button class="btn primary" id="next-day">다음 날 🌅</button>
+        <button class="btn primary" id="shop-back">← 가게로</button>
       </div>
     `;
     this.root.appendChild(s);
-    s.querySelector('#dex-btn').addEventListener('click', () => this.showCollection('shop'));
-    s.querySelector('#adv-btn').addEventListener('click', () => this.showAdventure());
+    s.querySelector('#shop-back').addEventListener('click', () => this.showHub());
 
     // 희귀 재료 상점
     const ingShop = s.querySelector('#ing-shop');
@@ -467,7 +546,6 @@ const UI = {
       list.appendChild(item);
       if (!owned && afford) item.querySelector('button').addEventListener('click', () => Game.buyUpgrade(up.id));
     });
-    s.querySelector('#next-day').addEventListener('click', () => Game.leaveShop());
   },
 
   /* =================================================================
@@ -505,7 +583,7 @@ const UI = {
       list.appendChild(item);
     });
 
-    s.querySelector('#adv-back').addEventListener('click', () => this.showShop());
+    s.querySelector('#adv-back').addEventListener('click', () => this.showHub());
   },
 
   doGather(id) {
