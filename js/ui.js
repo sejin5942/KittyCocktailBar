@@ -45,7 +45,7 @@ const UI = {
       <h1 class="game-title">고양이 판타지<br>쉐이크</h1>
       <p class="muted">판타지 바의 고양이 바텐더가 되어<br>손님의 주문에 맞는 마법 물약을 흔들어 만드세요냥!</p>
       <button class="btn primary big" id="start-btn">가게 시작하기 ✨</button>
-      <button class="btn" id="dex-btn">📖 손님 도감</button>
+      <button class="btn" id="dex-btn">📖 도감</button>
       <p class="muted small foot">📱 휴대폰을 흔들어 조작해요 · PC는 드래그/Space로 대체</p>
     `;
     this.root.appendChild(s);
@@ -57,26 +57,42 @@ const UI = {
   },
 
   /* =================================================================
-   * 손님 도감
+   * 도감 (손님 / 음료 탭)
    * ================================================================= */
-  showCollection(origin) {
+  showCollection(origin, tab) {
+    tab = tab || 'customers';
     this.hud.style.display = 'none';
     this.showSkip(false);
     this.clear();
-    const keys = Object.keys(CUSTOMERS);
-    const seenCount = keys.filter(k => Game.met[k] && Game.met[k].seen).length;
     const s = el('div', 'screen fade-in');
     s.innerHTML = `
       <div class="dex-header">
         <button class="btn small" id="dex-back">← 뒤로</button>
-        <h2 class="tight">손님 도감</h2>
-        <span class="dex-progress">발견 ${seenCount}/${keys.length}</span>
+        <h2 class="tight">도감</h2>
+        <span class="dex-progress" id="dex-progress"></span>
+      </div>
+      <div class="dex-tabs">
+        <button class="dex-tab ${tab === 'customers' ? 'on' : ''}" data-tab="customers">🐱 손님</button>
+        <button class="dex-tab ${tab === 'drinks' ? 'on' : ''}" data-tab="drinks">🍸 음료</button>
       </div>
       <div class="dex-grid" id="dex-grid"></div>
     `;
     this.root.appendChild(s);
 
+    if (tab === 'drinks') this.renderDrinkDex(s); else this.renderCustomerDex(s);
+
+    s.querySelectorAll('.dex-tab').forEach(t =>
+      t.addEventListener('click', () => this.showCollection(origin, t.dataset.tab)));
+    s.querySelector('#dex-back').addEventListener('click', () => {
+      if (origin === 'shop') this.showShop(); else this.showTitle();
+    });
+  },
+
+  renderCustomerDex(s) {
     const grid = s.querySelector('#dex-grid');
+    const keys = Object.keys(CUSTOMERS);
+    const seenCount = keys.filter(k => Game.met[k] && Game.met[k].seen).length;
+    s.querySelector('#dex-progress').textContent = `발견 ${seenCount}/${keys.length}`;
     keys.forEach(k => {
       const cust = CUSTOMERS[k];
       const m = Game.met[k];
@@ -85,13 +101,10 @@ const UI = {
       const orders = ORDERS.filter(o => o.customer === k).map(o => `${o.emoji} ${o.name}`);
       const card = el('div', 'dex-card' + (seen ? '' : ' locked'));
       card.style.setProperty('--cc', cust.color);
-
-      // 얼굴: 발견 전에도 같은 모양을 렌더하되 'sil'(실루엣) 클래스로 가림
       const sil = seen ? '' : ' sil';
       const face = cust.sprite
         ? `<div class="sprite-cat ${cust.sprite} sm${sil}"></div>`
         : `<div class="big-emoji dex-emoji${sil}">${cust.emoji}</div>`;
-
       card.innerHTML = seen ? `
         <div class="dex-face">${face}</div>
         <div class="dex-name">${cust.name}</div>
@@ -106,9 +119,38 @@ const UI = {
       `;
       grid.appendChild(card);
     });
+  },
 
-    s.querySelector('#dex-back').addEventListener('click', () => {
-      if (origin === 'shop') this.showShop(); else this.showTitle();
+  renderDrinkDex(s) {
+    const grid = s.querySelector('#dex-grid');
+    const madeCount = ORDERS.filter(o => Game.drinks[o.id] && Game.drinks[o.id].made).length;
+    s.querySelector('#dex-progress').textContent = `제조 ${madeCount}/${ORDERS.length}`;
+    ORDERS.forEach(o => {
+      const d = Game.drinks[o.id];
+      const made = !!(d && d.made);
+      const cust = CUSTOMERS[o.customer];
+      const recipe = o.recipe.map(id => `${INGREDIENT_MAP[id].emoji} ${INGREDIENT_MAP[id].name}`);
+      const card = el('div', 'dex-card' + (made ? '' : ' locked'));
+      card.style.setProperty('--cc', o.color);
+      if (made) {
+        const g = GRADES[d.best] || {};
+        card.innerHTML = `
+          <div class="dex-face"><div class="big-emoji dex-emoji">${o.emoji}</div></div>
+          <div class="dex-name">${o.name}</div>
+          <div class="dex-recipe">${recipe.join(' + ')}</div>
+          <div class="dex-drink">🫳 ${o.shakes}회 · ⏳ ${o.time}초</div>
+          <div class="dex-quip">최고 ${g.emoji || ''} ${g.title || ''}</div>
+          <div class="dex-hearts dex-made">🍸 ${d.count}잔 제조 · ${cust.name} 손님</div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="dex-face"><div class="big-emoji dex-emoji sil">${o.emoji}</div></div>
+          <div class="dex-name">???</div>
+          <div class="dex-pref muted">아직 만들지 못한 칵테일</div>
+          <div class="dex-drink muted">🧺 재료 ${o.recipe.length} · 🫳 ${o.shakes}회 · ⏳ ${o.time}초</div>
+        `;
+      }
+      grid.appendChild(card);
     });
   },
 

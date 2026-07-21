@@ -331,10 +331,22 @@ h2.tight, h1.tight { margin: 0; }
 .shop-actions .btn { flex: 1; }
 .shop-actions .btn.primary { flex: 2; }
 
-/* ---- 손님 도감 ---- */
+/* ---- 도감 ---- */
 .dex-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .dex-header h2 { margin: 0; }
 .dex-progress { color: var(--muted); font-size: 13px; font-weight: bold; white-space: nowrap; }
+.dex-tabs { display: flex; gap: 8px; }
+.dex-tab {
+  flex: 1; font-family: var(--font); font-weight: bold; font-size: 14px; cursor: pointer;
+  color: var(--muted); background: var(--panel); border: 1px solid var(--panel-brd);
+  border-radius: 999px; padding: 9px 12px; transition: all .15s ease;
+}
+.dex-tab.on {
+  color: var(--ink); background: linear-gradient(135deg, var(--neon), var(--pink));
+  border-color: transparent; box-shadow: 0 6px 16px rgba(176,107,255,.35);
+}
+.dex-recipe { font-size: 11px; color: var(--ink); line-height: 1.4; }
+.dex-made { color: var(--gold) !important; }
 .dex-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .dex-card {
   background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 16px;
